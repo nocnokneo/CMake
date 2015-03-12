@@ -741,6 +741,15 @@ void cmLocalVisualStudio7Generator::WriteConfiguration(std::ostream& fout,
       }
     }
 
+  // Precompile Headers
+  std::string pchHeader = target->GetPchHeader(configName, "CXX");
+  if(!pchHeader.empty())
+    {
+    pchHeader = this->ConvertToOutputFormat(pchHeader, SHELL);
+    flags += " /Yu\"" + pchHeader + "\"";
+    flags += " /FI\"" + pchHeader + "\"";
+    }
+
   // Get preprocessor definitions for this directory.
   std::string defineFlags = this->Makefile->GetDefineFlags();
   Options::Tool t = Options::Compiler;
@@ -1539,6 +1548,33 @@ void cmLocalVisualStudio7Generator::WriteVCProjFile(std::ostream& fout,
         }
       fout << "\t\t</Filter>\n";
       }
+    }
+
+  // Precompile Headers
+  std::string pchSource = target->GetPchSource("", "CXX");
+  if(!pchSource.empty())
+    {
+    pchSource = this->ConvertToOutputFormat(pchSource, SHELL);
+    std::string platform =
+      static_cast<cmGlobalVisualStudio7Generator *>
+      (this->GlobalGenerator)->GetPlatformName();
+    fout << "\t\t<Filter\n";
+    fout << "\t\t\tName=\"Precompiled Header Files\"\n";
+    fout << "\t\t\tFilter=\"\">\n";
+    fout << "\t\t\t<File\n";
+    fout << "\t\t\t\tRelativePath=\"" << pchSource << "\">\n";
+    for(std::vector<std::string>::iterator i = configs.begin();
+        i != configs.end(); ++i)
+      {
+      fout << "\t\t\t\t<FileConfiguration\n";
+      fout << "\t\t\t\t\tName=\"" << *i << '|' << platform << "\">\n";
+      fout << "\t\t\t\t\t<Tool\n";
+      fout << "\t\t\t\t\t\tName=\"VCCLCompilerTool\"\n";
+      fout << "\t\t\t\t\t\tUsePrecompiledHeader=\"1\"/>\n";
+      fout << "\t\t\t\t</FileConfiguration>\n";
+      }
+    fout << "\t\t\t</File>\n";
+    fout << "\t\t</Filter>\n";
     }
 
   fout << "\t</Files>\n";
