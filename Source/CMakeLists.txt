@@ -400,6 +400,7 @@ foreach(command_file
     cmTargetCompileFeaturesCommand
     cmTargetCompileOptionsCommand
     cmTargetIncludeDirectoriesCommand
+    cmTargetPrecompileHeadersCommand
     cmTargetSourcesCommand
     cmUseMangledMesaCommand
     cmUtilitySourceCommand
