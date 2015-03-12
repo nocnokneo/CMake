@@ -1,0 +1,13 @@
+cmake_minimum_required(VERSION 3.2)
+project(PrecompileHeaders C)
+
+add_library(foo foo.c)
+target_include_directories(foo PUBLIC include)
+target_precompile_headers(foo PUBLIC foo.h)
+
+add_library(bar INTERFACE)
+target_include_directories(bar INTERFACE include)
+target_precompile_headers(bar INTERFACE bar.h)
+
+add_executable(foobar foobar.c)
+target_link_libraries(foobar foo bar)
