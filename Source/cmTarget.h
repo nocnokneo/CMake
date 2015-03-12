@@ -218,6 +218,8 @@ public:
                            bool before = false);
   void InsertCompileDefinition(std::string const& entry,
                                cmListFileBacktrace const& bt);
+  void InsertPrecompileHeader(std::string const& entry,
+                              cmListFileBacktrace const& bt);
 
   void AppendBuildInterfaceIncludes();
 
@@ -239,6 +241,9 @@ public:
 
   cmStringRange GetCompileDefinitionsEntries() const;
   cmBacktraceRange GetCompileDefinitionsBacktraces() const;
+
+  cmStringRange GetPrecompileHeadersEntries() const;
+  cmBacktraceRange GetPrecompileHeadersBacktraces() const;
 
   cmStringRange GetSourceEntries() const;
   cmBacktraceRange GetSourceBacktraces() const;

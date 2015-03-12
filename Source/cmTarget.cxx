@@ -45,6 +45,8 @@ public:
   std::vector<cmListFileBacktrace> CompileFeaturesBacktraces;
   std::vector<std::string> CompileDefinitionsEntries;
   std::vector<cmListFileBacktrace> CompileDefinitionsBacktraces;
+  std::vector<std::string> PrecompileHeadersEntries;
+  std::vector<cmListFileBacktrace> PrecompileHeadersBacktraces;
   std::vector<std::string> SourceEntries;
   std::vector<cmListFileBacktrace> SourceBacktraces;
   std::vector<std::string> LinkImplementationPropertyEntries;
@@ -790,6 +792,16 @@ cmBacktraceRange cmTarget::GetCompileDefinitionsBacktraces() const
   return cmMakeRange(this->Internal->CompileDefinitionsBacktraces);
 }
 
+cmStringRange cmTarget::GetPrecompileHeadersEntries() const
+{
+  return cmMakeRange(this->Internal->PrecompileHeadersEntries);
+}
+
+cmBacktraceRange cmTarget::GetPrecompileHeadersBacktraces() const
+{
+  return cmMakeRange(this->Internal->PrecompileHeadersBacktraces);
+}
+
 cmStringRange cmTarget::GetSourceEntries() const
 {
   return cmMakeRange(this->Internal->SourceEntries);
@@ -1198,6 +1210,17 @@ void cmTarget::SetProperty(const std::string& prop, const char* value)
       this->Internal->CompileDefinitionsBacktraces.push_back(lfbt);
       }
     }
+  else if(prop == "PRECOMPILE_HEADERS")
+    {
+    this->Internal->PrecompileHeadersEntries.clear();
+    this->Internal->PrecompileHeadersBacktraces.clear();
+    if (value)
+      {
+      this->Internal->PrecompileHeadersEntries.push_back(value);
+      cmListFileBacktrace lfbt = this->Makefile->GetBacktrace();
+      this->Internal->PrecompileHeadersBacktraces.push_back(lfbt);
+      }
+    }
   else if(prop == "EXPORT_NAME" && this->IsImported())
     {
     std::ostringstream e;
@@ -1296,6 +1319,15 @@ void cmTarget::AppendProperty(const std::string& prop, const char* value,
       this->Internal->CompileDefinitionsEntries.push_back(value);
       cmListFileBacktrace lfbt = this->Makefile->GetBacktrace();
       this->Internal->CompileDefinitionsBacktraces.push_back(lfbt);
+      }
+    }
+  else if(prop == "PRECOMPILE_HEADERS")
+    {
+    if (value && *value)
+      {
+      this->Internal->PrecompileHeadersEntries.push_back(value);
+      cmListFileBacktrace lfbt = this->Makefile->GetBacktrace();
+      this->Internal->PrecompileHeadersBacktraces.push_back(lfbt);
       }
     }
   else if(prop == "EXPORT_NAME" && this->IsImported())
@@ -1406,6 +1438,14 @@ void cmTarget::InsertCompileDefinition(std::string const& entry,
 {
   this->Internal->CompileDefinitionsEntries.push_back(entry);
   this->Internal->CompileDefinitionsBacktraces.push_back(bt);
+}
+
+//----------------------------------------------------------------------------
+void cmTarget::InsertPrecompileHeader(std::string const& entry,
+                                      cmListFileBacktrace const& bt)
+{
+  this->Internal->PrecompileHeadersEntries.push_back(entry);
+  this->Internal->PrecompileHeadersBacktraces.push_back(bt);
 }
 
 //----------------------------------------------------------------------------
@@ -1664,6 +1704,7 @@ const char *cmTarget::GetProperty(const std::string& prop,
   MAKE_STATIC_PROP(COMPILE_FEATURES);
   MAKE_STATIC_PROP(COMPILE_OPTIONS);
   MAKE_STATIC_PROP(COMPILE_DEFINITIONS);
+  MAKE_STATIC_PROP(PRECOMPILE_HEADERS);
   MAKE_STATIC_PROP(IMPORTED);
   MAKE_STATIC_PROP(NAME);
   MAKE_STATIC_PROP(BINARY_DIR);
@@ -1678,6 +1719,7 @@ const char *cmTarget::GetProperty(const std::string& prop,
     specialProps.insert(propCOMPILE_FEATURES);
     specialProps.insert(propCOMPILE_OPTIONS);
     specialProps.insert(propCOMPILE_DEFINITIONS);
+    specialProps.insert(propPRECOMPILE_HEADERS);
     specialProps.insert(propIMPORTED);
     specialProps.insert(propNAME);
     specialProps.insert(propBINARY_DIR);
@@ -1744,6 +1786,17 @@ const char *cmTarget::GetProperty(const std::string& prop,
 
       static std::string output;
       output = cmJoin(this->Internal->CompileDefinitionsEntries, ";");
+      return output.c_str();
+      }
+    else if(prop == propPRECOMPILE_HEADERS)
+      {
+      if (this->Internal->PrecompileHeadersEntries.empty())
+        {
+        return 0;
+        }
+
+      static std::string output;
+      output = cmJoin(this->Internal->PrecompileHeadersEntries, ";");
       return output.c_str();
       }
     else if (prop == propIMPORTED)

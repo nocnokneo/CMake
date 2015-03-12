@@ -270,6 +270,7 @@ cmGeneratorTarget::cmGeneratorTarget(cmTarget* t, cmLocalGenerator* lg)
   DebugCompileOptionsDone(false),
   DebugCompileFeaturesDone(false),
   DebugCompileDefinitionsDone(false),
+  DebugPrecompileHeadersDone(false),
   DebugSourcesDone(false),
   LinkImplementationLanguageIsContextDependent(true),
   UtilityItemsDone(false)
@@ -301,6 +302,11 @@ cmGeneratorTarget::cmGeneratorTarget(cmTarget* t, cmLocalGenerator* lg)
         this->CompileDefinitionsEntries);
 
   CreatePropertyGeneratorExpressions(
+        t->GetPrecompileHeadersEntries(),
+        t->GetPrecompileHeadersBacktraces(),
+        this->PrecompileHeadersEntries);
+
+  CreatePropertyGeneratorExpressions(
         t->GetSourceEntries(),
         t->GetSourceBacktraces(),
         this->SourceEntries, true);
@@ -318,6 +324,7 @@ cmGeneratorTarget::~cmGeneratorTarget()
   cmDeleteAll(this->CompileOptionsEntries);
   cmDeleteAll(this->CompileFeaturesEntries);
   cmDeleteAll(this->CompileDefinitionsEntries);
+  cmDeleteAll(this->PrecompileHeadersEntries);
   cmDeleteAll(this->SourceEntries);
   cmDeleteAll(this->LinkInformation);
   this->LinkInformation.clear();
@@ -3144,6 +3151,76 @@ void cmGeneratorTarget::GetCompileDefinitions(std::vector<std::string> &list,
                             language);
 
   cmDeleteAll(linkInterfaceCompileDefinitionsEntries);
+}
+
+//----------------------------------------------------------------------------
+static void processPrecompileHeaders(cmGeneratorTarget const* tgt,
+      const std::vector<cmGeneratorTarget::TargetPropertyEntry*> &entries,
+      std::vector<std::string> &options,
+      UNORDERED_SET<std::string> &uniqueOptions,
+      cmGeneratorExpressionDAGChecker *dagChecker,
+      const std::string& config, bool debugOptions,
+      std::string const& language)
+{
+  processCompileOptionsInternal(tgt, entries, options, uniqueOptions,
+                                dagChecker, config, debugOptions,
+                                "precompile headers", language);
+}
+
+//----------------------------------------------------------------------------
+void cmGeneratorTarget::GetPrecompileHeaders(std::vector<std::string> &list,
+                                            const std::string& config,
+                                            const std::string& language) const
+{
+  UNORDERED_SET<std::string> uniqueOptions;
+
+  cmGeneratorExpressionDAGChecker dagChecker(this->GetName(),
+                                             "PRECOMPILE_HEADERS", 0, 0);
+
+  std::vector<std::string> debugProperties;
+  const char *debugProp =
+              this->Makefile->GetDefinition("CMAKE_DEBUG_TARGET_PROPERTIES");
+  if (debugProp)
+    {
+    cmSystemTools::ExpandListArgument(debugProp, debugProperties);
+    }
+
+  bool debugDefines = !this->DebugCompileDefinitionsDone
+                          && std::find(debugProperties.begin(),
+                                debugProperties.end(),
+                                "PRECOMPILE_HEADERS")
+                        != debugProperties.end();
+
+  if (this->GlobalGenerator->GetConfigureDoneCMP0026())
+    {
+    this->DebugCompileDefinitionsDone = true;
+    }
+
+  processPrecompileHeaders(this,
+                          this->PrecompileHeadersEntries,
+                          list,
+                          uniqueOptions,
+                          &dagChecker,
+                          config,
+                          debugDefines,
+                          language);
+
+  std::vector<cmGeneratorTarget::TargetPropertyEntry*>
+    linkInterfacePrecompileHeadersEntries;
+  AddInterfaceEntries(
+    this, config, "INTERFACE_PRECOMPILE_HEADERS",
+    linkInterfacePrecompileHeadersEntries);
+
+  processPrecompileHeaders(this,
+                          linkInterfacePrecompileHeadersEntries,
+                          list,
+                          uniqueOptions,
+                          &dagChecker,
+                          config,
+                          debugDefines,
+                          language);
+
+  cmDeleteAll(linkInterfacePrecompileHeadersEntries);
 }
 
 //----------------------------------------------------------------------------
