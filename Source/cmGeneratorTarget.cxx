@@ -2898,7 +2898,7 @@ static void processCompileOptionsInternal(cmGeneratorTarget const* tgt,
     if (!usedOptions.empty())
       {
       tgt->GetLocalGenerator()->GetCMakeInstance()->IssueMessage(cmake::LOG,
-                            std::string("Used compile ") + logName
+                            std::string("Used ") + logName
                             + std::string(" for target ")
                             + tgt->GetName() + ":\n"
                             + usedOptions, (*it)->ge->GetBacktrace());
@@ -2916,8 +2916,8 @@ static void processCompileOptions(cmGeneratorTarget const* tgt,
       std::string const& language)
 {
   processCompileOptionsInternal(tgt, entries, options, uniqueOptions,
-                                dagChecker, config, debugOptions, "options",
-                                language);
+                                dagChecker, config, debugOptions,
+                                "compile options", language);
 }
 
 //----------------------------------------------------------------------------
@@ -2986,8 +2986,8 @@ static void processCompileFeatures(cmGeneratorTarget const* tgt,
       const std::string& config, bool debugOptions)
 {
   processCompileOptionsInternal(tgt, entries, options, uniqueOptions,
-                                dagChecker, config, debugOptions, "features",
-                                std::string());
+                                dagChecker, config, debugOptions,
+                                "compile features", std::string());
 }
 
 //----------------------------------------------------------------------------
@@ -3055,7 +3055,7 @@ static void processCompileDefinitions(cmGeneratorTarget const* tgt,
 {
   processCompileOptionsInternal(tgt, entries, options, uniqueOptions,
                                 dagChecker, config, debugOptions,
-                                "definitions", language);
+                                "compile definitions", language);
 }
 
 //----------------------------------------------------------------------------
