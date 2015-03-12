@@ -97,6 +97,9 @@ private:
 
   std::string GetConfigName(std::string const& configuration) const;
 
+  std::string MakePchUseFlags(cmGeneratorTarget* target,
+                              const std::string& config);
+
   // Special definition check for VS6.
   virtual bool CheckDefinition(std::string const& define) const;
 };

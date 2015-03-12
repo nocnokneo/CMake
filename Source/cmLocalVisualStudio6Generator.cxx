@@ -366,6 +366,19 @@ void cmLocalVisualStudio6Generator::WriteDSPFile(std::ostream& fout,
     this->WriteGroup(&(*sg), target, fout, libName);
     }
 
+  // Precompile Headers
+  std::string pchHeader = target->GetPchHeader("", "CXX");
+  std::string pchSource = target->GetPchSource("", "CXX");
+  if(!pchHeader.empty() && !pchSource.empty())
+    {
+    fout << "# Begin Source File\n";
+    fout << "SOURCE="
+         << this->ConvertToOutputFormat(pchSource, SHELL) << '\n';
+    fout << "# ADD CPP /Yc\""
+         << this->ConvertToOutputFormat(pchHeader, SHELL) << "\"\n";
+    fout << "# End Source File\n";
+    }
+
   // Write the DSP file's footer.
   this->WriteDSPFooter(fout);
 }
@@ -929,6 +942,17 @@ cmLocalVisualStudio6Generator::GetTargetIncludeOptions(
   return includeOptions;
 }
 
+std::string cmLocalVisualStudio6Generator
+::MakePchUseFlags(cmGeneratorTarget* target, const std::string& config)
+{
+  std::string pchHeader = target->GetPchHeader(config, "CXX");
+  if(pchHeader.empty())
+    {
+    return std::string();
+    }
+  pchHeader = this->ConvertToOutputFormat(pchHeader, SHELL);
+  return "/FI\"" + pchHeader + "\" /Yu\"" + pchHeader + "\"";
+}
 
 // Code in blocks surrounded by a test for this definition is needed
 // only for compatibility with user project's replacement DSP
@@ -1818,6 +1842,16 @@ void cmLocalVisualStudio6Generator
       cmSystemTools::ReplaceString(line, "COMPILE_DEFINITIONS",
                                    defines.c_str());
       }
+
+    // Precompile Headers
+    cmSystemTools::ReplaceString(line, "PCH_USE_FLAGS_DEBUG",
+            this->MakePchUseFlags(target, "Debug").c_str());
+    cmSystemTools::ReplaceString(line, "PCH_USE_FLAGS_RELEASE",
+            this->MakePchUseFlags(target, "Release").c_str());
+    cmSystemTools::ReplaceString(line, "PCH_USE_FLAGS_MINSIZEREL",
+            this->MakePchUseFlags(target, "MinSizeRel").c_str());
+    cmSystemTools::ReplaceString(line, "PCH_USE_FLAGS_RELWITHDEBINFO",
+            this->MakePchUseFlags(target, "RelWithDebInfo").c_str());
 
     fout << line.c_str() << std::endl;
     }
