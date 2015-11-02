@@ -1624,6 +1624,18 @@ void cmVisualStudio10TargetGenerator::WriteAllSources()
     this->WriteMissingFiles();
     }
 
+  // Precompile Headers
+  const std::string& linkLanguage = this->GeneratorTarget->GetLinkerLanguage();
+  std::string pchSource = this->GeneratorTarget->GetPchSource("", linkLanguage);
+  if(!pchSource.empty())
+    {
+    this->ConvertToWindowsSlash(pchSource);
+    this->WriteString("<ClCompile Include=\"", 2);
+    (*this->BuildFileStream ) << cmVS10EscapeXML(pchSource) << "\">\n";
+    this->WriteString("<PrecompiledHeader>Create</PrecompiledHeader>\n", 3);
+    this->WriteString("</ClCompile>\n", 2);
+    }
+
   this->WriteString("</ItemGroup>\n", 1);
 }
 
@@ -1946,13 +1958,26 @@ bool cmVisualStudio10TargetGenerator::ComputeClOptions(
   this->LocalGenerator->AddCompileOptions(flags, this->GeneratorTarget,
                                           linkLanguage, configName.c_str());
 
+  // Precompile Headers
+  std::string pchHeader = this->GeneratorTarget->GetPchHeader(configName, linkLanguage);
+  if(!pchHeader.empty())
+    {
+    this->ConvertToWindowsSlash(pchHeader);
+    clOptions.AddFlag("PrecompiledHeader", "Use");
+    clOptions.AddFlag("PrecompiledHeaderFile", pchHeader.c_str());
+    clOptions.AddFlag("ForcedIncludeFiles", pchHeader.c_str());
+    }
+  else if(this->MSTools)
+    {
+    clOptions.AddFlag("PrecompiledHeader", "NotUsing");
+    }
+
   // Get preprocessor definitions for this directory.
   std::string defineFlags =
       this->GeneratorTarget->Target->GetMakefile()->GetDefineFlags();
   if(this->MSTools)
     {
     clOptions.FixExceptionHandlingDefault();
-    clOptions.AddFlag("PrecompiledHeader", "NotUsing");
     std::string asmLocation = configName + "/";
     clOptions.AddFlag("AssemblerListingLocation", asmLocation.c_str());
     }
