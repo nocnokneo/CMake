@@ -2490,7 +2490,7 @@ void cmGlobalXCodeGenerator::CreateBuildSettings(cmGeneratorTarget* gtgt,
     }
 
   // Precompile Headers
-  std::string pchHeader = target.GetPchHeader(configName, "CXX");
+  std::string pchHeader = gtgt->GetPchHeader(configName, "CXX");
   if(!pchHeader.empty())
     {
     buildSettings->AddAttribute("GCC_PREFIX_HEADER",
