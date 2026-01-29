@@ -29,12 +29,11 @@ behavior can be overridden with the :option:`-FS <ctest -FS>`,
 .. versionchanged:: 3.32
 
   When using the :option:`--repeat <ctest --repeat>` option, fixture setup and
-  cleanup tests are executed only once, while the tests that require the
-  fixture are repeated. This means the execution order is:
-  setup -> test (repeated N times) -> cleanup. Previously, all tests including
-  fixture setup and cleanup had the repeat mode applied, resulting in:
-  setup (repeated N times) -> test (repeated N times) -> cleanup (repeated N
-  times).
+  cleanup tests are executed only once by default, while the tests that require
+  the fixture are repeated. This means the execution order is:
+  setup -> test (repeated N times) -> cleanup. This behavior can be controlled
+  by the :prop_test:`FIXTURE_REPEAT_MODE` property on the fixture setup and
+  cleanup tests.
 
 Since setup and cleanup tasks are also tests, they can have an ordering
 specified by the :prop_test:`DEPENDS` test property just like any other tests.

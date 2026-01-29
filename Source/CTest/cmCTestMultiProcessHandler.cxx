@@ -263,12 +263,19 @@ void cmCTestMultiProcessHandler::StartTestProcess(int test)
 
   auto testRun = cm::make_unique<cmCTestRunTest>(*this, test);
 
-  // Apply repeat mode only to non-fixture tests.
-  // Fixture setup and cleanup tests should run once per test execution cycle,
-  // not be repeated along with the tests that require them.
+  // Handle test repetition based on FIXTURE_REPEAT_MODE property.
+  // - ONCE (default): Fixture setup/cleanup tests run once, other tests repeat
+  // - EACH_REPEAT: Not yet implemented (would require scheduling changes)
+  // - BATCHED_EACH_REPEAT: All tests including fixtures are repeated (legacy)
   bool isFixtureTest = !this->Properties[test]->FixturesSetup.empty() ||
     !this->Properties[test]->FixturesCleanup.empty();
-  if (this->RepeatMode != cmCTest::Repeat::Never && !isFixtureTest) {
+  bool shouldRepeat = true;
+  if (isFixtureTest) {
+    // Fixture tests only repeat with BATCHED_EACH_REPEAT mode
+    shouldRepeat = this->Properties[test]->FixtureRepeat ==
+      cmCTestTestHandler::FixtureRepeatMode::BatchedEachRepeat;
+  }
+  if (this->RepeatMode != cmCTest::Repeat::Never && shouldRepeat) {
     testRun->SetRepeatMode(this->RepeatMode);
     testRun->SetNumberOfRuns(this->RepeatCount);
   }

@@ -116,6 +116,18 @@ function(run_repeat_fixture_tests)
 endfunction()
 run_repeat_fixture_tests()
 
+function(run_repeat_fixture_batched_tests)
+  # Test FIXTURE_REPEAT_MODE=BATCHED_EACH_REPEAT restores legacy behavior
+  # where fixture setup/cleanup tests are also repeated.
+  set(RunCMake_TEST_BINARY_DIR ${RunCMake_BINARY_DIR}/repeat-fixture-batched-build)
+  run_cmake(repeat-fixture-batched-cmake)
+  set(RunCMake_TEST_NO_CLEAN 1)
+  run_cmake_command(repeat-fixture-batched-ctest
+    ${CMAKE_CTEST_COMMAND} -C Debug --repeat until-fail:3
+    )
+endfunction()
+run_repeat_fixture_batched_tests()
+
 block()
   set(RunCMake_TEST_BINARY_DIR ${RunCMake_BINARY_DIR}/rerun)
   set(RunCMake_TEST_NO_CLEAN 1)
