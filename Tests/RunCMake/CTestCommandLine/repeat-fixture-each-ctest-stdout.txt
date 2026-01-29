@@ -1,0 +1,22 @@
+.*fixture_setup
+.*Passed.*
+.*test_with_fixture
+.*Passed.*
+.*fixture_cleanup
+.*Passed.*
+Re-queuing fixture cycle for EACH_REPEAT mode
+.*fixture_setup
+.*Passed.*
+.*test_with_fixture
+.*Passed.*
+.*fixture_cleanup
+.*Passed.*
+Re-queuing fixture cycle for EACH_REPEAT mode
+.*fixture_setup
+.*Passed.*
+.*test_with_fixture
+.*Passed.*
+.*fixture_cleanup
+.*Passed.*
+.*
+100% tests passed, 0 tests failed out of 9

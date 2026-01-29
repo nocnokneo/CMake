@@ -16,9 +16,9 @@ The allowed values are:
   setup -> test (repeated N times) -> cleanup.
 
 ``EACH_REPEAT``
-  Reserved for future use. Currently behaves the same as ``ONCE``. In a future
-  release, this would run fixtures for each test repetition in the order:
-  (setup -> test -> cleanup) repeated N times.
+  Runs the entire fixture cycle for each test repetition. The execution order
+  is: (setup -> test -> cleanup) repeated N times. This ensures each test
+  repetition starts with a fresh fixture setup and proper cleanup.
 
 ``BATCHED_EACH_REPEAT``
   Legacy behavior where all tests, including fixture setup and cleanup tests,
@@ -45,11 +45,17 @@ With the default ``ONCE`` mode and ``ctest --repeat until-fail:3``:
 - ``mytest`` runs 3 times
 - ``cleanup`` runs once
 
-To restore legacy behavior where all tests are repeated:
+To run the entire fixture cycle for each repetition:
 
 .. code-block:: cmake
 
-  set_tests_properties(setup cleanup PROPERTIES FIXTURE_REPEAT_MODE BATCHED_EACH_REPEAT)
+  set_tests_properties(setup cleanup PROPERTIES FIXTURE_REPEAT_MODE EACH_REPEAT)
+
+With ``EACH_REPEAT`` mode and ``ctest --repeat until-fail:3``:
+
+- First cycle: ``setup`` -> ``mytest`` -> ``cleanup``
+- Second cycle: ``setup`` -> ``mytest`` -> ``cleanup``
+- Third cycle: ``setup`` -> ``mytest`` -> ``cleanup``
 
 See also :prop_test:`FIXTURES_SETUP`, :prop_test:`FIXTURES_CLEANUP`, and
 :prop_test:`FIXTURES_REQUIRED`.

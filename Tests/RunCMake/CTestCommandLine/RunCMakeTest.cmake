@@ -128,6 +128,18 @@ function(run_repeat_fixture_batched_tests)
 endfunction()
 run_repeat_fixture_batched_tests()
 
+function(run_repeat_fixture_each_tests)
+  # Test FIXTURE_REPEAT_MODE=EACH_REPEAT runs the entire fixture cycle
+  # for each repetition: (setup -> test -> cleanup) x N times.
+  set(RunCMake_TEST_BINARY_DIR ${RunCMake_BINARY_DIR}/repeat-fixture-each-build)
+  run_cmake(repeat-fixture-each-cmake)
+  set(RunCMake_TEST_NO_CLEAN 1)
+  run_cmake_command(repeat-fixture-each-ctest
+    ${CMAKE_CTEST_COMMAND} -C Debug --repeat until-fail:3 -V
+    )
+endfunction()
+run_repeat_fixture_each_tests()
+
 block()
   set(RunCMake_TEST_BINARY_DIR ${RunCMake_BINARY_DIR}/rerun)
   set(RunCMake_TEST_NO_CLEAN 1)
