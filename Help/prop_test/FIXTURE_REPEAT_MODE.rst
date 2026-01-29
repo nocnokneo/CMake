@@ -8,11 +8,17 @@ Controls how test fixtures behave when tests are repeated using the
 for tests that have the :prop_test:`FIXTURES_SETUP` or
 :prop_test:`FIXTURES_CLEANUP` property set.
 
+If this property is not set on a fixture test, the default value is determined
+by the :policy:`CMP0210` policy:
+
+* Policy ``NEW``: Default is ``EACH_REPEAT``
+* Policy ``OLD``: Default is ``BATCHED_EACH_REPEAT``
+
 The allowed values are:
 
 ``ONCE``
   Fixture setup and cleanup tests run only once, while tests that require the
-  fixture are repeated. This is the default behavior. The execution order is:
+  fixture are repeated. The execution order is:
   setup -> test (repeated N times) -> cleanup.
 
 ``EACH_REPEAT``
@@ -46,23 +52,18 @@ Example:
   add_test(NAME cleanup COMMAND cleanup_script)
   set_tests_properties(cleanup PROPERTIES FIXTURES_CLEANUP MyFixture)
 
-With the default ``ONCE`` mode and ``ctest --repeat until-fail:3``:
-
-- ``setup`` runs once
-- ``mytest`` runs 3 times
-- ``cleanup`` runs once
-
-To run the entire fixture cycle for each repetition:
-
-.. code-block:: cmake
-
-  set_tests_properties(setup cleanup PROPERTIES FIXTURE_REPEAT_MODE EACH_REPEAT)
-
-With ``EACH_REPEAT`` mode and ``ctest --repeat until-fail:3``:
+With ``EACH_REPEAT`` mode (default with policy CMP0210 NEW) and
+``ctest --repeat until-fail:3``:
 
 - First cycle: ``setup`` -> ``mytest`` -> ``cleanup``
 - Second cycle: ``setup`` -> ``mytest`` -> ``cleanup``
 - Third cycle: ``setup`` -> ``mytest`` -> ``cleanup``
 
-See also :prop_test:`FIXTURES_SETUP`, :prop_test:`FIXTURES_CLEANUP`, and
-:prop_test:`FIXTURES_REQUIRED`.
+To explicitly set the mode:
+
+.. code-block:: cmake
+
+  set_tests_properties(setup cleanup PROPERTIES FIXTURE_REPEAT_MODE EACH_REPEAT)
+
+See also :prop_test:`FIXTURES_SETUP`, :prop_test:`FIXTURES_CLEANUP`,
+:prop_test:`FIXTURES_REQUIRED`, and :policy:`CMP0210`.

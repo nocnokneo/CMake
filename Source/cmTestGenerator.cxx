@@ -334,6 +334,37 @@ void cmTestGenerator::GenerateOldStyle(std::ostream& fout, Indent indent)
 
 void cmTestGenerator::GenerateInternalProperties(std::ostream& os)
 {
+  // Set default FIXTURE_REPEAT_MODE based on CMP0210 policy for fixture tests
+  // that don't have an explicit FIXTURE_REPEAT_MODE property set.
+  if (!this->Test->GetProperty("FIXTURE_REPEAT_MODE")) {
+    bool isFixtureTest = this->Test->GetProperty("FIXTURES_SETUP") ||
+      this->Test->GetProperty("FIXTURES_CLEANUP");
+    if (isFixtureTest) {
+      switch (this->Test->GetCMP0210()) {
+        case cmPolicies::WARN:
+          this->Test->GetMakefile()->IssueMessage(
+            MessageType::AUTHOR_WARNING,
+            cmStrCat("Test '", this->Test->GetName(),
+                     "' is a fixture test (has FIXTURES_SETUP or "
+                     "FIXTURES_CLEANUP property) but does not have "
+                     "FIXTURE_REPEAT_MODE set. "
+                     "Policy CMP0210 is not set. Using legacy "
+                     "BATCHED_EACH_REPEAT mode for backward compatibility. "
+                     "Set the policy to NEW to use EACH_REPEAT mode, or set "
+                     "FIXTURE_REPEAT_MODE explicitly.\n",
+                     cmPolicies::GetPolicyWarning(cmPolicies::CMP0210)));
+          CM_FALLTHROUGH;
+        case cmPolicies::OLD:
+          os << " FIXTURE_REPEAT_MODE BATCHED_EACH_REPEAT";
+          break;
+        case cmPolicies::NEW:
+        default:
+          os << " FIXTURE_REPEAT_MODE EACH_REPEAT";
+          break;
+      }
+    }
+  }
+
   cmListFileBacktrace bt = this->Test->GetBacktrace();
   if (bt.Empty()) {
     return;
