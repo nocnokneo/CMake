@@ -20,6 +20,13 @@ The allowed values are:
   is: (setup -> test -> cleanup) repeated N times. This ensures each test
   repetition starts with a fresh fixture setup and proper cleanup.
 
+  .. note::
+
+    For ``EACH_REPEAT`` mode to work correctly, **both** the setup and cleanup
+    tests for a fixture should have their ``FIXTURE_REPEAT_MODE`` set to
+    ``EACH_REPEAT``. The re-queuing of the fixture cycle is triggered when the
+    cleanup test completes.
+
 ``BATCHED_EACH_REPEAT``
   Legacy behavior where all tests, including fixture setup and cleanup tests,
   are repeated. The execution order is:

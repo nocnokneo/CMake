@@ -189,6 +189,8 @@ private:
   std::map<int, std::vector<int>> CleanupToFixtureCycle;
   // Original dependencies for tests (to restore after re-queue)
   std::map<int, TestSet> OriginalDependencies;
+  // Cache: fixture name to cleanup tests with EACH_REPEAT mode
+  std::map<std::string, std::vector<int>> EachRepeatCleanups;
 
   // Tests pending selection to start.  They may have dependencies.
   TestMap PendingTests;
