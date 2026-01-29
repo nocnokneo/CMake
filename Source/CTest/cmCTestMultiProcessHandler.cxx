@@ -263,7 +263,12 @@ void cmCTestMultiProcessHandler::StartTestProcess(int test)
 
   auto testRun = cm::make_unique<cmCTestRunTest>(*this, test);
 
-  if (this->RepeatMode != cmCTest::Repeat::Never) {
+  // Apply repeat mode only to non-fixture tests.
+  // Fixture setup and cleanup tests should run once per test execution cycle,
+  // not be repeated along with the tests that require them.
+  bool isFixtureTest = !this->Properties[test]->FixturesSetup.empty() ||
+    !this->Properties[test]->FixturesCleanup.empty();
+  if (this->RepeatMode != cmCTest::Repeat::Never && !isFixtureTest) {
     testRun->SetRepeatMode(this->RepeatMode);
     testRun->SetNumberOfRuns(this->RepeatCount);
   }

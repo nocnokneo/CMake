@@ -104,6 +104,18 @@ endfunction()
 run_repeat_until_fail_tests(--repeat-until-fail 3)
 run_repeat_until_fail_tests(--repeat until-fail:3)
 
+function(run_repeat_fixture_tests)
+  # Test that fixture setup/cleanup tests are NOT repeated, only the
+  # tests requiring the fixture are repeated.
+  set(RunCMake_TEST_BINARY_DIR ${RunCMake_BINARY_DIR}/repeat-fixture-build)
+  run_cmake(repeat-fixture-cmake)
+  set(RunCMake_TEST_NO_CLEAN 1)
+  run_cmake_command(repeat-fixture-ctest
+    ${CMAKE_CTEST_COMMAND} -C Debug --repeat until-fail:3
+    )
+endfunction()
+run_repeat_fixture_tests()
+
 block()
   set(RunCMake_TEST_BINARY_DIR ${RunCMake_BINARY_DIR}/rerun)
   set(RunCMake_TEST_NO_CLEAN 1)
