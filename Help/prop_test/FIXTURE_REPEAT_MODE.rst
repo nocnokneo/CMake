@@ -16,8 +16,9 @@ The allowed values are:
   setup -> test (repeated N times) -> cleanup.
 
 ``EACH_REPEAT``
-  Reserved for future use. Would run fixtures for each test repetition in the
-  order: (setup -> test -> cleanup) repeated N times.
+  Reserved for future use. Currently behaves the same as ``ONCE``. In a future
+  release, this would run fixtures for each test repetition in the order:
+  (setup -> test -> cleanup) repeated N times.
 
 ``BATCHED_EACH_REPEAT``
   Legacy behavior where all tests, including fixture setup and cleanup tests,
