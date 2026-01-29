@@ -77,6 +77,16 @@ public:
     this->PolicyStatusCMP0178 = p;
   }
 
+  /** Get/Set the CMP0210 policy setting */
+  cmPolicies::PolicyStatus GetCMP0210() const
+  {
+    return this->PolicyStatusCMP0210;
+  }
+  void SetCMP0210(cmPolicies::PolicyStatus p)
+  {
+    this->PolicyStatusCMP0210 = p;
+  }
+
   /** Set/Get whether lists in command lines should be expanded. */
   bool GetCommandExpandLists() const;
   void SetCommandExpandLists(bool b);
@@ -93,4 +103,5 @@ private:
   cmListFileBacktrace Backtrace;
   cmPolicies::PolicyStatus PolicyStatusCMP0158;
   cmPolicies::PolicyStatus PolicyStatusCMP0178;
+  cmPolicies::PolicyStatus PolicyStatusCMP0210;
 };

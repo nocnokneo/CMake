@@ -144,6 +144,11 @@ protected:
   void InitializeLoop();
   void FinalizeLoop();
 
+  // Initialize tracking for EACH_REPEAT fixture mode
+  void InitializeEachRepeatFixtures();
+  // Re-queue fixture cycle tests for EACH_REPEAT mode
+  void RequeueFixtureCycle(int cleanupTest);
+
   bool ResourceLocksAvailable(int test);
   void LockResources(int index);
   void UnlockResources(int index);
@@ -176,6 +181,16 @@ private:
   std::string ResourceSpecSetupFixture;
   cm::optional<std::size_t> ResourceSpecSetupTest;
   bool HasInvalidGeneratedResourceSpec = false;
+
+  // Track fixture repetition cycles for EACH_REPEAT mode
+  // Maps fixture name to remaining repetitions
+  std::map<std::string, int> FixtureRepetitionsLeft;
+  // Maps cleanup test index to the tests it needs to re-queue
+  std::map<int, std::vector<int>> CleanupToFixtureCycle;
+  // Original dependencies for tests (to restore after re-queue)
+  std::map<int, TestSet> OriginalDependencies;
+  // Cache: fixture name to cleanup tests with EACH_REPEAT mode
+  std::map<std::string, std::vector<int>> EachRepeatCleanups;
 
   // Tests pending selection to start.  They may have dependencies.
   TestMap PendingTests;

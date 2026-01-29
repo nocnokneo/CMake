@@ -1,0 +1,30 @@
+CMP0210
+-------
+
+.. versionadded:: 3.32
+
+Test fixtures use ``EACH_REPEAT`` mode by default with ``--repeat``.
+
+When using :option:`ctest --repeat`, fixture setup and cleanup tests can behave
+differently based on the :prop_test:`FIXTURE_REPEAT_MODE` property.  CMake 3.31
+and below effectively used the ``BATCHED_EACH_REPEAT`` behavior where fixture
+tests were also repeated, resulting in:
+``setup (N times) -> test (N times) -> cleanup (N times)``.
+
+CMake 3.32 and above prefer the ``EACH_REPEAT`` mode where the entire fixture
+cycle is run for each test repetition:
+``(setup -> test -> cleanup) repeated N times``.
+
+The ``OLD`` behavior of this policy sets the default
+:prop_test:`FIXTURE_REPEAT_MODE` to ``BATCHED_EACH_REPEAT`` for fixture tests
+that don't have an explicit ``FIXTURE_REPEAT_MODE`` property.
+
+The ``NEW`` behavior of this policy sets the default
+:prop_test:`FIXTURE_REPEAT_MODE` to ``EACH_REPEAT`` for fixture tests that
+don't have an explicit ``FIXTURE_REPEAT_MODE`` property.
+
+.. |INTRODUCED_IN_CMAKE_VERSION| replace:: 3.32
+.. |WARNS_OR_DOES_NOT_WARN| replace:: warns
+.. include:: include/STANDARD_ADVICE.rst
+
+.. include:: include/DEPRECATED.rst

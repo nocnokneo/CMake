@@ -124,6 +124,13 @@ public:
     std::string Name;
   };
 
+  enum class FixtureRepeatMode
+  {
+    Once,             // Fixtures run once around all test repetitions (default)
+    EachRepeat,       // Fixtures run for each test repetition
+    BatchedEachRepeat // Legacy: all tests repeated, batched between fixtures
+  };
+
   struct cmCTestTestProperties
   {
     void AppendError(cm::string_view err);
@@ -170,6 +177,7 @@ public:
     std::set<std::string> FixturesCleanup;
     std::set<std::string> FixturesRequired;
     std::set<std::string> RequireSuccessDepends;
+    FixtureRepeatMode FixtureRepeat = FixtureRepeatMode::Once;
     std::vector<std::vector<cmCTestTestResourceRequirement>> ResourceGroups;
     std::string GeneratedResourceSpecFile;
     // Private test generator properties used to track backtraces

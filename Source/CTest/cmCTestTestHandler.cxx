@@ -2241,6 +2241,18 @@ bool cmCTestTestHandler::SetTestsProperties(
             cmList lval{ val };
 
             rt.FixturesRequired.insert(lval.begin(), lval.end());
+          } else if (key == "FIXTURE_REPEAT_MODE"_s) {
+            if (val == "ONCE"_s) {
+              rt.FixtureRepeat = FixtureRepeatMode::Once;
+            } else if (val == "EACH_REPEAT"_s) {
+              rt.FixtureRepeat = FixtureRepeatMode::EachRepeat;
+            } else if (val == "BATCHED_EACH_REPEAT"_s) {
+              rt.FixtureRepeat = FixtureRepeatMode::BatchedEachRepeat;
+            } else {
+              rt.AppendError(cmStrCat("FIXTURE_REPEAT_MODE \"", val,
+                                      "\" not recognized. Must be ONCE, "
+                                      "EACH_REPEAT, or BATCHED_EACH_REPEAT."));
+            }
           } else if (key == "TIMEOUT"_s) {
             rt.Timeout = cmDuration(atof(val.c_str()));
           } else if (key == "TIMEOUT_SIGNAL_NAME"_s) {

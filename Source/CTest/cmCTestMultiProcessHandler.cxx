@@ -138,6 +138,15 @@ bool cmCTestMultiProcessHandler::SetTests(TestMap tests,
   this->PendingTests = std::move(tests);
   this->Properties = std::move(properties);
   this->Total = this->PendingTests.size();
+
+  // Store original dependencies for potential re-queuing in EACH_REPEAT mode
+  for (auto const& t : this->PendingTests) {
+    this->OriginalDependencies[t.first] = t.second.Depends;
+  }
+
+  // Initialize fixture repetition tracking for EACH_REPEAT mode
+  this->InitializeEachRepeatFixtures();
+
   if (!this->CTest->GetShowOnly()) {
     this->ReadCostData();
     this->HasCycles = !this->CheckCycles();
@@ -149,6 +158,72 @@ bool cmCTestMultiProcessHandler::SetTests(TestMap tests,
     this->CreateTestCostList();
   }
   return true;
+}
+
+void cmCTestMultiProcessHandler::InitializeEachRepeatFixtures()
+{
+  // For EACH_REPEAT mode, we need to track which cleanup tests trigger
+  // re-queuing of their fixture cycle. When repeat mode is active and
+  // a cleanup test with EACH_REPEAT finishes, we re-queue the entire cycle.
+  if (this->RepeatMode == cmCTest::Repeat::Never || this->RepeatCount <= 1) {
+    return;
+  }
+
+  // Build maps from fixture names to their setup/cleanup test indices
+  std::map<std::string, std::vector<int>> fixtureSetups;
+  std::map<std::string, std::vector<int>> fixtureCleanups;
+  std::map<std::string, std::vector<int>> fixtureRequirers;
+
+  for (auto const& p : this->Properties) {
+    int testIdx = p.first;
+    auto* props = p.second;
+
+    for (std::string const& fixture : props->FixturesSetup) {
+      fixtureSetups[fixture].push_back(testIdx);
+    }
+    for (std::string const& fixture : props->FixturesCleanup) {
+      fixtureCleanups[fixture].push_back(testIdx);
+    }
+    for (std::string const& fixture : props->FixturesRequired) {
+      fixtureRequirers[fixture].push_back(testIdx);
+    }
+  }
+
+  // For each fixture that has cleanup tests with EACH_REPEAT mode,
+  // set up the re-queue tracking and cache for quick lookup
+  for (auto const& fc : fixtureCleanups) {
+    std::string const& fixtureName = fc.first;
+    std::vector<int> const& cleanupTests = fc.second;
+
+    for (int cleanupIdx : cleanupTests) {
+      auto* cleanupProps = this->Properties[cleanupIdx];
+      if (cleanupProps->FixtureRepeat ==
+          cmCTestTestHandler::FixtureRepeatMode::EachRepeat) {
+        // This cleanup test uses EACH_REPEAT mode
+        // Initialize repetitions left (minus 1 for the first run)
+        this->FixtureRepetitionsLeft[fixtureName] = this->RepeatCount - 1;
+
+        // Cache this cleanup test for quick lookup by fixture name
+        this->EachRepeatCleanups[fixtureName].push_back(cleanupIdx);
+
+        // Collect all tests in this fixture cycle
+        std::vector<int>& cycleTests = this->CleanupToFixtureCycle[cleanupIdx];
+        auto setupIt = fixtureSetups.find(fixtureName);
+        if (setupIt != fixtureSetups.end()) {
+          for (int idx : setupIt->second) {
+            cycleTests.push_back(idx);
+          }
+        }
+        auto requirerIt = fixtureRequirers.find(fixtureName);
+        if (requirerIt != fixtureRequirers.end()) {
+          for (int idx : requirerIt->second) {
+            cycleTests.push_back(idx);
+          }
+        }
+        cycleTests.push_back(cleanupIdx);
+      }
+    }
+  }
 }
 
 // Set the max number of tests that can be run at the same time.
@@ -263,7 +338,40 @@ void cmCTestMultiProcessHandler::StartTestProcess(int test)
 
   auto testRun = cm::make_unique<cmCTestRunTest>(*this, test);
 
-  if (this->RepeatMode != cmCTest::Repeat::Never) {
+  // Handle test repetition based on FIXTURE_REPEAT_MODE property.
+  // - ONCE (default): Fixture setup/cleanup tests run once, other tests repeat
+  // - EACH_REPEAT: Entire fixture cycle is re-queued after cleanup
+  // - BATCHED_EACH_REPEAT: All tests including fixtures are repeated (legacy)
+  bool isFixtureTest = !this->Properties[test]->FixturesSetup.empty() ||
+    !this->Properties[test]->FixturesCleanup.empty();
+  bool shouldRepeat = true;
+
+  if (isFixtureTest) {
+    auto repeatMode = this->Properties[test]->FixtureRepeat;
+    if (repeatMode == cmCTestTestHandler::FixtureRepeatMode::Once) {
+      // ONCE mode: fixture tests don't repeat
+      shouldRepeat = false;
+    } else if (repeatMode == cmCTestTestHandler::FixtureRepeatMode::EachRepeat) {
+      // EACH_REPEAT mode: repetition happens through re-queuing, not here
+      shouldRepeat = false;
+    }
+    // BATCHED_EACH_REPEAT: shouldRepeat stays true
+  } else {
+    // Check if this test requires a fixture that uses EACH_REPEAT mode
+    // Use the cached EachRepeatCleanups for efficient lookup
+    for (std::string const& fixture : this->Properties[test]->FixturesRequired) {
+      auto cleanupIt = this->EachRepeatCleanups.find(fixture);
+      if (cleanupIt != this->EachRepeatCleanups.end() &&
+          !cleanupIt->second.empty()) {
+        // This test requires a fixture with EACH_REPEAT mode
+        // Repetition happens through re-queuing, not here
+        shouldRepeat = false;
+        break;
+      }
+    }
+  }
+
+  if (this->RepeatMode != cmCTest::Repeat::Never && shouldRepeat) {
     testRun->SetRepeatMode(this->RepeatMode);
     testRun->SetNumberOfRuns(this->RepeatCount);
   }
@@ -811,12 +919,70 @@ void cmCTestMultiProcessHandler::FinishTestProcess(
   this->DeallocateResources(test);
   this->UnlockResources(test);
 
+  // Check if this is a cleanup test that needs to trigger EACH_REPEAT re-queue
+  if (testResult.Passed && !this->StopTimePassed) {
+    auto cycleIt = this->CleanupToFixtureCycle.find(test);
+    if (cycleIt != this->CleanupToFixtureCycle.end()) {
+      // This is a cleanup test with EACH_REPEAT mode
+      // Check if there are more repetitions needed for any of its fixtures
+      for (std::string const& fixture : properties->FixturesCleanup) {
+        auto repIt = this->FixtureRepetitionsLeft.find(fixture);
+        if (repIt != this->FixtureRepetitionsLeft.end() &&
+            repIt->second > 0) {
+          // More repetitions needed - re-queue the fixture cycle
+          this->RequeueFixtureCycle(test);
+          break;
+        }
+      }
+    }
+  }
+
   runner.reset();
 
   if (this->JobServerClient) {
     this->JobServerClient->ReleaseToken();
   }
   this->StartNextTestsOnIdle();
+}
+
+void cmCTestMultiProcessHandler::RequeueFixtureCycle(int cleanupTest)
+{
+  auto cycleIt = this->CleanupToFixtureCycle.find(cleanupTest);
+  if (cycleIt == this->CleanupToFixtureCycle.end()) {
+    return;
+  }
+
+  // Decrement repetitions for all fixtures this cleanup handles
+  auto* cleanupProps = this->Properties[cleanupTest];
+  for (std::string const& fixture : cleanupProps->FixturesCleanup) {
+    auto repIt = this->FixtureRepetitionsLeft.find(fixture);
+    if (repIt != this->FixtureRepetitionsLeft.end() && repIt->second > 0) {
+      repIt->second--;
+    }
+  }
+
+  // Re-queue all tests in this fixture cycle
+  std::vector<int> const& cycleTests = cycleIt->second;
+  for (int testIdx : cycleTests) {
+    // Verify the test still exists in Properties
+    if (this->Properties.find(testIdx) == this->Properties.end()) {
+      continue;
+    }
+    // Restore original dependencies
+    TestInfo info;
+    auto depIt = this->OriginalDependencies.find(testIdx);
+    if (depIt != this->OriginalDependencies.end()) {
+      info.Depends = depIt->second;
+    }
+    this->PendingTests[testIdx] = info;
+    this->OrderedTests.push_back(testIdx);
+    this->Total++;
+  }
+
+  cmCTestOptionalLog(this->CTest, HANDLER_VERBOSE_OUTPUT,
+                     "Re-queuing fixture cycle for EACH_REPEAT mode"
+                       << std::endl,
+                     this->Quiet);
 }
 
 void cmCTestMultiProcessHandler::UpdateCostData()

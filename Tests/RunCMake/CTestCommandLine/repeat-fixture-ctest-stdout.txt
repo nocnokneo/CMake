@@ -1,0 +1,13 @@
+^Test project .*/Tests/RunCMake/CTestCommandLine/repeat-fixture-build
+.*Start 1: fixture_setup
+.*Test #1: fixture_setup \.+   Passed.*
+.*Start 3: test_with_fixture
+.*Test #3: test_with_fixture \.+   Passed.*
+.*Start 3: test_with_fixture
+.*Test #3: test_with_fixture \.+   Passed.*
+.*Start 3: test_with_fixture
+.*Test #3: test_with_fixture \.+   Passed.*
+.*Start 2: fixture_cleanup
+.*Test #2: fixture_cleanup \.+   Passed.*
+.*
+100% tests passed, 0 tests failed out of 3
