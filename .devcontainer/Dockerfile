@@ -25,6 +25,8 @@ RUN apt-get update \
       man-db \
       nano \
       ninja-build \
+      nodejs \
+      npm \
       openssh-client \
       python3-sphinx \
       vim \
@@ -42,6 +44,12 @@ RUN python3 -m venv /opt/cmake-dev \
  && ln -s /opt/cmake-dev/bin/clang-format /usr/local/bin/clang-format-18 \
  && ln -s /opt/cmake-dev/bin/pre-commit /usr/local/bin/pre-commit
 
+# Install the GitLab CLI, `glab`, and `glab-axi`, an agent-ergonomic wrapper
+# around it, for interacting with our GitLab instance.
+COPY install_glab.sh /tmp/
+RUN sh /tmp/install_glab.sh \
+ && rm /tmp/install_glab.sh
+
 # Create an unprivileged user matching the typical host account so that files
 # created in the mounted source tree are not owned by `root`.
 RUN groupadd --gid ${USER_GID} ${USERNAME} \
@@ -49,9 +57,11 @@ RUN groupadd --gid ${USER_GID} ${USERNAME} \
  && echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USERNAME} \
  && chmod 0440 /etc/sudoers.d/${USERNAME}
 
-# Pre-create the `ccache` directory so that a volume mounted over it inherits
-# the ownership recorded here.
-RUN install -d -o ${USERNAME} -g ${USERNAME} /home/${USERNAME}/.cache/ccache
+# Pre-create the directories that `devcontainer.json` mounts volumes over so
+# that the volumes inherit the ownership recorded here.
+RUN install -d -o ${USERNAME} -g ${USERNAME} \
+      /home/${USERNAME}/.cache/ccache \
+      /home/${USERNAME}/.config/glab-cli
 
 # Run the optional local customization scripts.  They are ignored by Git so
 # that developers may customize the container without modifying tracked files
