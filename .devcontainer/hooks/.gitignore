@@ -1,0 +1,4 @@
+# Local customization scripts run while building the development container.
+# See `Help/dev/devcontainer.rst`.
+/root.sh
+/user.sh

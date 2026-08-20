@@ -1,0 +1,156 @@
+CMake Dev Container Guide
+*************************
+
+The following is a guide to the development container provided for building,
+testing, and formatting CMake itself.  See documentation on `CMake
+Development`_ for more information.
+
+.. _`CMake Development`: README.rst
+
+Overview
+========
+
+The `.devcontainer`_ directory at the top of the CMake source tree describes
+a Linux development environment following the `Dev Container Specification`_.
+Using it is entirely optional, but it offers a quick way to get a complete
+environment with all the tools needed to build CMake, run its test suite,
+build its documentation, and satisfy its style rules.
+
+The container is built on one of the images our CI infrastructure uses, so
+the environment closely matches the one in which merge requests are tested.
+Those images are described under `.gitlab/ci/docker`_.
+
+.. _`.devcontainer`: ../../.devcontainer
+.. _`Dev Container Specification`: https://containers.dev
+.. _`.gitlab/ci/docker`: ../../.gitlab/ci/docker
+
+Prerequisites
+=============
+
+* A container engine such as `Docker`_ or `Podman`_.
+
+* A tool that understands the specification, such as the `Dev Containers`_
+  extension for Visual Studio Code, the `Dev Container CLI`_, or another
+  `supporting tool`_.
+
+.. _`Docker`: https://docs.docker.com/get-started/get-docker/
+.. _`Podman`: https://podman.io
+.. _`Dev Containers`: https://code.visualstudio.com/docs/devcontainers/containers
+.. _`Dev Container CLI`: https://github.com/devcontainers/cli
+.. _`supporting tool`: https://containers.dev/supporting
+
+Usage
+=====
+
+In Visual Studio Code, open the CMake source tree and run the
+``Dev Containers: Reopen in Container`` command.  With the
+`Dev Container CLI`_, start the container from the top of the source tree:
+
+.. code-block:: console
+
+  $ devcontainer up --workspace-folder .
+  $ devcontainer exec --workspace-folder . bash
+
+The source tree is mounted into the container, so changes made inside it are
+made to the same working tree.  Commits may be created either inside or
+outside the container.  `Utilities/SetupForDevelopment.sh`_ may likewise be
+run in either place to configure your Git identity and install the project's
+commit hooks, and takes effect in both.  It is interactive, so the container
+does not run it automatically, but `.devcontainer/setup-status.sh`_ reports
+whether it still needs to be run each time a tool attaches to the container.
+
+.. _`Utilities/SetupForDevelopment.sh`: ../../Utilities/SetupForDevelopment.sh
+.. _`.devcontainer/setup-status.sh`: ../../.devcontainer/setup-status.sh
+
+Build CMake in the container as one would on any other Linux host, as
+described in `Building CMake`_:
+
+.. code-block:: console
+
+  $ cmake -G Ninja -B build -S .
+  $ cmake --build build
+  $ ctest --test-dir build
+
+.. _`Building CMake`: ../../README.rst#building-cmake
+
+Provided Tools
+==============
+
+In addition to the compiler and external dependencies provided by the base
+image, the container provides:
+
+* ``cmake`` and ``ninja``, to build CMake with.
+
+* ``ccache``, to speed up repeated builds, e.g.:
+
+  .. code-block:: console
+
+    $ cmake -G Ninja -B build -S . -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+  Its cache is stored in a named volume so that it survives rebuilds of the
+  container.
+
+* ``clang-format`` version 18, exactly as required by our `C++ Code Style`_,
+  available as both ``clang-format`` and ``clang-format-18``:
+
+  .. code-block:: console
+
+    $ Utilities/Scripts/clang-format.bash --modified
+
+* ``pre-commit``, to run the checks configured in
+  `.pre-commit-config.yaml`_:
+
+  .. code-block:: console
+
+    $ pre-commit install
+    $ pre-commit run --all-files
+
+* ``sphinx-build``, to build the documentation as described in the
+  `CMake Documentation Guide`_.
+
+* ``gdb``, to debug CMake as described in the `CMake Debugging Guide`_.
+
+.. _`C++ Code Style`: source.rst#c-code-style
+.. _`.pre-commit-config.yaml`: ../../.pre-commit-config.yaml
+.. _`CMake Documentation Guide`: documentation.rst
+.. _`CMake Debugging Guide`: debug.rst
+
+Note that the base images are minimized for CI use, so documentation such as
+man pages is not available for packages they provide.
+
+Local Customization
+===================
+
+The container is meant to be an unconstrained space that each developer may
+adapt.  Two optional scripts, if present, run while the container image is
+built:
+
+``.devcontainer/hooks/root.sh``
+  Runs as ``root``, e.g. to install additional packages.
+
+``.devcontainer/hooks/user.sh``
+  Runs as the unprivileged container user, e.g. to populate a shell
+  configuration file.
+
+Both are ignored by Git, so local customizations never appear in a commit
+and are preserved across updates to the tracked container definition.  For
+example, to add a package and a shell alias:
+
+.. code-block:: console
+
+  $ cat > .devcontainer/hooks/root.sh <<'EOF'
+  apt-get update && apt-get install -y --no-install-recommends tmux
+  EOF
+  $ cat > .devcontainer/hooks/user.sh <<'EOF'
+  echo "alias b='cmake --build build'" >> ~/.bashrc
+  EOF
+
+Rebuild the container to apply them, e.g. with the
+``Dev Containers: Rebuild Container`` command in Visual Studio Code.
+
+Larger or longer-lived changes may of course be made by editing
+`.devcontainer/Dockerfile`_ or `.devcontainer/devcontainer.json`_ directly,
+but take care not to commit them accidentally.
+
+.. _`.devcontainer/Dockerfile`: ../../.devcontainer/Dockerfile
+.. _`.devcontainer/devcontainer.json`: ../../.devcontainer/devcontainer.json
